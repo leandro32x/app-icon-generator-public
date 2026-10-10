@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { IconSource } from '../utils/iconManager';
 import { IconTile, type IconTileConfig, type MaskShape } from './IconTile';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
@@ -208,7 +208,7 @@ function AndroidPreview({
   const frameH = 740;
 
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex w-full flex-col items-center gap-4">
       {/* Mask selector */}
       <div className="flex items-center gap-3">
         <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Launcher Mask</span>
@@ -407,7 +407,7 @@ function IOSPreview({
   ];
 
   return (
-    <div className="flex flex-col items-center gap-5">
+    <div className="flex w-full flex-col items-center gap-5">
       <ZoomPanViewport frameW={frameW} frameH={frameH}>
       <div
         style={{
@@ -543,6 +543,21 @@ function ZoomPanViewport({
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const dragState = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [availableWidth, setAvailableWidth] = useState(0);
+
+  // Track the width the viewport may use (its parent column) so narrow
+  // screens get a scaled-down frame instead of a horizontal overflow.
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const measure = () => setAvailableWidth(el.clientWidth);
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const MIN_ZOOM = 0.5;
   const MAX_ZOOM = 3;
@@ -594,12 +609,15 @@ function ZoomPanViewport({
 
   // Choose a viewport size slightly smaller than the frame at 1× so the
   // phone remains the hero element; allow overflow hidden for clean clipping.
+  // On narrow screens the viewport shrinks to the available width and the
+  // frame is scaled by the same factor so the whole phone stays visible.
   const viewportW = frameW + 40;
   const viewportH = frameH;
+  const fit = availableWidth > 0 ? Math.min(1, availableWidth / viewportW) : 1;
   const isPanning = dragState.current !== null;
 
   return (
-    <div className="flex flex-col items-center gap-3 w-full">
+    <div ref={containerRef} className="flex flex-col items-center gap-3 w-full">
       <div
         ref={viewportRef}
         onPointerDown={onPointerDown}
@@ -608,11 +626,14 @@ function ZoomPanViewport({
         onPointerCancel={onPointerUp}
         onWheel={onWheel}
         style={{
-          width: viewportW,
-          height: viewportH,
+          width: '100%',
+          maxWidth: viewportW,
+          height: Math.round(viewportH * fit),
           overflow: 'hidden',
           position: 'relative',
-          touchAction: 'none',
+          // Let the page scroll over the phone until the user zooms in; a
+          // zoomed frame is panned with the finger instead.
+          touchAction: zoom > 1 ? 'none' : 'pan-y',
           cursor: isPanning ? 'grabbing' : zoom > 1 ? 'grab' : 'default',
           borderRadius: 24,
         }}
@@ -622,7 +643,7 @@ function ZoomPanViewport({
             position: 'absolute',
             left: '50%',
             top: '50%',
-            transform: `translate(-50%, -50%) translate(${pan.x}px, ${pan.y}px) scale(${zoom * BASE_SCALE})`,
+            transform: `translate(-50%, -50%) translate(${pan.x}px, ${pan.y}px) scale(${zoom * BASE_SCALE * fit})`,
             transformOrigin: 'center center',
             transition: isPanning ? 'none' : 'transform 120ms ease-out',
             willChange: 'transform',

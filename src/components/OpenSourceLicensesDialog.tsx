@@ -83,7 +83,7 @@ export function OpenSourceLicensesDialog({ open, onOpenChange }: OpenSourceLicen
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Open Source Licenses</DialogTitle>
           <DialogDescription>
@@ -91,7 +91,7 @@ export function OpenSourceLicensesDialog({ open, onOpenChange }: OpenSourceLicen
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[560px] pr-3">
+        <ScrollArea className="max-h-[min(560px,65vh)] pr-3">
           {/* ── Icon Packs ───────────────────────────────────────────────── */}
           <section>
             <div className="flex items-center justify-between mb-3">
@@ -121,8 +121,8 @@ export function OpenSourceLicensesDialog({ open, onOpenChange }: OpenSourceLicen
                 {filtered.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-4 text-center">No results.</p>
                 ) : (
-                  <div className="rounded-lg border border-border overflow-hidden">
-                    <table className="w-full text-xs">
+                  <div className="rounded-lg border border-border overflow-x-auto">
+                    <table className="w-full min-w-[400px] text-xs">
                       <thead>
                         <tr className="bg-muted text-muted-foreground">
                           <th className="text-left px-3 py-2 font-medium">Pack</th>
@@ -224,8 +224,8 @@ export function OpenSourceLicensesDialog({ open, onOpenChange }: OpenSourceLicen
             <h3 className="font-semibold text-sm text-foreground mb-3">
               App Icon Generator — OSS Dependencies
             </h3>
-            <div className="rounded-lg border border-border overflow-hidden">
-              <table className="w-full text-xs">
+            <div className="rounded-lg border border-border overflow-x-auto">
+              <table className="w-full min-w-[400px] text-xs">
                 <thead>
                   <tr className="bg-muted text-muted-foreground">
                     <th className="text-left px-3 py-2 font-medium">Library</th>

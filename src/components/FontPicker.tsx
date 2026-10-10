@@ -501,7 +501,7 @@ export function FontPicker({ value, onChange, sampleText, id, placeholder = 'Cho
           with a floor so it never collapses to a sliver on tiny ones. */}
       <PopoverContent
         align="start"
-        className="flex w-[380px] max-h-[min(460px,max(var(--radix-popover-content-available-height),300px))] flex-col overflow-hidden p-0"
+        className="flex w-[min(380px,calc(100vw-2rem))] max-h-[min(460px,max(var(--radix-popover-content-available-height),300px))] flex-col overflow-hidden p-0"
       >
         <FontPanel value={value} category={category} onCategoryChange={setCategory} onSelect={handleSelect} />
       </PopoverContent>

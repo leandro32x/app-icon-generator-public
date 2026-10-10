@@ -129,18 +129,18 @@ export function IconPreview({ iconUrl, config, iconSource, iconStyle, onConfigCh
 
   return (
     <Card className="border border-border shadow-sm bg-card overflow-hidden">
-      <CardHeader className="p-6 border-b border-border bg-surface-subtle">
+      <CardHeader className="p-4 sm:p-6 border-b border-border bg-surface-subtle">
         <CardTitle className="text-base font-semibold text-foreground">Icon Preview</CardTitle>
         <CardDescription className="text-sm text-muted-foreground">Real-time preview across sizes and devices</CardDescription>
       </CardHeader>
-      <CardContent className="p-6">
+      <CardContent className="p-4 sm:p-6">
         {/* Preview-mode segmented control (full width, prominent) */}
         <ToggleGroup
           type="single"
           value={previewMode}
           onValueChange={(v) => v && setPreviewMode(v as 'standard' | 'android' | 'ios')}
           variant="outline"
-          className="grid grid-cols-3 w-full mb-6"
+          className="grid grid-cols-3 w-full mb-4 sm:mb-6"
         >
           <ToggleGroupItem value="standard" className="text-sm">Standard</ToggleGroupItem>
           <ToggleGroupItem value="android" className="text-sm">Android</ToggleGroupItem>
@@ -148,9 +148,9 @@ export function IconPreview({ iconUrl, config, iconSource, iconStyle, onConfigCh
         </ToggleGroup>
 
         {previewMode === 'standard' ? (
-          <div className="space-y-8">
+          <div className="space-y-6 sm:space-y-8">
             {/* Hero */}
-            <div className="bg-surface-subtle rounded-xl p-12 flex flex-col items-center justify-center gap-3 border border-border">
+            <div className="bg-surface-subtle rounded-xl p-6 sm:p-12 flex flex-col items-center justify-center gap-3 border border-border">
               {hasForeground ? (
                 <>
                   <div
@@ -183,7 +183,7 @@ export function IconPreview({ iconUrl, config, iconSource, iconStyle, onConfigCh
             {/* Size Variations */}
             <div>
               <h3 className="text-sm font-medium text-foreground mb-4">Size Variations</h3>
-              <div className="flex items-end gap-6 justify-center bg-surface-subtle rounded-xl p-6">
+              <div className="flex flex-wrap items-end justify-center gap-4 sm:gap-6 bg-surface-subtle rounded-xl p-4 sm:p-6">
                 {[32, 48, 64, 96, 128].map((size) => (
                   hasForeground ? (
                     <IconSizeTile key={size} size={size} showLabel config={config} iconUrl={iconUrl} iconSource={iconSource} iconStyle={iconStyle} />

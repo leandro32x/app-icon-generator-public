@@ -79,6 +79,7 @@
       },
       "scripts": {
             "dev": "vite",
+            "dev:lan": "vite --host",
             "build": "vite build"
       }
 }

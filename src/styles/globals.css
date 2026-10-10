@@ -237,6 +237,16 @@ html {
   font-size: var(--font-size);
 }
 
+/* iOS Safari zooms the page into any focused field whose text is under 16px.
+   Keep text fields at 16px on phones; the few tiny read-outs scale with them. */
+@media (max-width: 767px) {
+  input:not([type='range']):not([type='color']):not([type='checkbox']):not([type='radio']),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
 /* Dialog unfold animations */
 @keyframes overlay-in {
   from { opacity: 0; }

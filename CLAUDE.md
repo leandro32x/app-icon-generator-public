@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 npm install      # install dependencies
 npm run dev      # Vite dev server on http://localhost:3000 (auto-opens browser)
+npm run dev:lan  # same, bound to every interface (--host) so a phone on the Wi-Fi can open it; no auto-open
 npm run build    # production build, emitted to build/ (outDir override)
 ```
 
@@ -57,7 +58,7 @@ Every icon is a `prefix:name` Iconify id (e.g. `lucide:alarm-clock`). The whole 
 ### Style families & license filtering
 
 - **`utils/iconifyCollections.ts`** — `STYLE_FAMILIES` registry maps families that ship as multiple prefixes sharing icon names (Phosphor `ph`/`ph-fill`/…, Solar, Material Symbols, Fluent, Heroicons) to a single user-facing "source" with a style selector. Collections outside this registry hide the style selector. Also carries per-family `license` metadata and `isBrandPack` (trademark warnings).
-- **`utils/packFilterStore.ts`** — a tiny pub/sub store (consumed via `useSyncExternalStore`) gating which packs appear in the picker, keyed by SPDX license code. Uses a **blacklist** approach: missing keys default to enabled so new/uncontrolled licenses are never silently hidden.
+- **`utils/packFilterStore.ts`** — a tiny pub/sub store (consumed via `useSyncExternalStore`) gating which packs appear in the picker, keyed by SPDX license code. Uses a **blacklist** approach: missing keys default to enabled so new/uncontrolled licenses are never silently hidden. Brand/logo packs are the exception: `isBrandCollection` (`iconifyCollections.ts` — Iconify category `Logos`, or a brand/logo prefix/name, or a family's `isBrandPack`) hides them **by default** behind a separate `brand-packs-visible` flag that `PackSettingsDialog` toggles; a restored session can still show a brand icon, and the Foreground tab then shows the trademark warning.
 
 ### Export pipeline (the tricky part)
 
@@ -88,6 +89,8 @@ Project-specific primitives added on top of shadcn, all in `components/ui/`:
 - `angle-slider.tsx` (`AngleDial`) — compact rotary control built on `@ark-ui/react` AngleSlider. 0° is 12 o'clock, clockwise, so a value maps 1:1 to CSS gradient angles and CSS `rotate`. `arc="signed"` draws the ring the short way round so values past 180° read as negative (used for foreground rotation, which is stored as −180…180; the dial converts). Ark puts `aria-label` on the thumb (`role="slider"`), not the root.
 - `slider-field.tsx` (`SliderField`) — one-line label · slider · editable number read-out; double-clicking the label restores `resetTo`. Use it instead of stacking a `Label` over a `Slider`.
 - `color-field.tsx` (`ColorField`) — swatch (native picker) + hex text.
+
+**Responsive layout**: `sm:` (640 px) is the phone/desktop split for paddings and stacked rows (transform sliders + rotation dial, effect select + opacity); the editor/preview columns stack below `lg`. Both grid columns need `min-w-0` — `truncate`d filenames in the download list otherwise widen the column past the viewport. On phones a floating live `IconTile` in `App.tsx` (hidden while the preview column intersects the viewport) jumps to the preview; the icon grid picks its column count from a `ResizeObserver` on the scroll container; `ZoomPanViewport` scales the phone frame to its container width and only sets `touch-action: none` while zoomed so the page still scrolls; popovers are capped at `calc(100vw-2rem)`; `globals.css` forces 16 px text fields on phones so iOS Safari does not zoom into them.
 
 The Customize tab is an `Accordion type="multiple"` of `components/SettingsSection.tsx` blocks (Background, Foreground color, Shape, Position & size, Effect); each header carries a live summary (`SwatchChip` + text) so collapsed sections still show their state. `GradientStopsEditor` is shared with the Store Banner tab and embeds the `AngleDial` for the gradient angle.
 

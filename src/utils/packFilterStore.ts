@@ -63,6 +63,34 @@ export function setLicenseEnabled(spdx: string, enabled: boolean): void {
   const settings = loadSettings();
   settings[spdx] = enabled;
   saveSettings(settings);
+  notifyFilterChange();
+}
+
+const BRAND_PACKS_STORAGE_KEY = 'brand-packs-visible';
+
+/**
+ * Whether brand / logo packs (see `isBrandCollection`) are listed in the
+ * picker. Off by default: company and product logos are trademarked, so they
+ * are rarely usable as an app icon and only clutter the list.
+ */
+export function getBrandPacksVisible(): boolean {
+  try {
+    return localStorage.getItem(BRAND_PACKS_STORAGE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function setBrandPacksVisible(visible: boolean): void {
+  try {
+    localStorage.setItem(BRAND_PACKS_STORAGE_KEY, String(visible));
+  } catch {
+    // ignore storage errors (e.g. private browsing quota)
+  }
+  notifyFilterChange();
+}
+
+function notifyFilterChange(): void {
   filterVersion++;
   listeners.forEach((cb) => cb());
 }

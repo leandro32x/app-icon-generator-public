@@ -11,11 +11,13 @@ import { Badge } from './ui/badge';
 import { Alert, AlertDescription } from './ui/alert';
 import { ScrollArea } from './ui/scroll-area';
 import { TriangleAlert } from 'lucide-react';
-import { STYLE_FAMILIES, getFamilyForPrefix } from '../utils/iconifyCollections';
+import { STYLE_FAMILIES, getFamilyForPrefix, isBrandCollection } from '../utils/iconifyCollections';
 import { fetchCollections, type CollectionInfo } from '../utils/iconifyApi';
 import {
   getDisabledSpdxCodes,
   setLicenseEnabled,
+  getBrandPacksVisible,
+  setBrandPacksVisible,
   subscribeToPackFilter,
   getFilterVersion,
 } from '../utils/packFilterStore';
@@ -61,6 +63,7 @@ function inferCommercialFromSpdx(spdx: string): boolean | undefined {
 export function PackSettingsDialog({ open, onOpenChange }: PackSettingsDialogProps) {
   const filterVersion = useSyncExternalStore(subscribeToPackFilter, getFilterVersion);
   const disabledSpdx = useMemo(() => getDisabledSpdxCodes(), [filterVersion]);
+  const brandPacksVisible = useMemo(() => getBrandPacksVisible(), [filterVersion]);
 
   const [apiCollections, setApiCollections] = useState<Record<string, CollectionInfo> | null>(null);
   const [loadingCollections, setLoadingCollections] = useState(false);
@@ -123,13 +126,18 @@ export function PackSettingsDialog({ open, onOpenChange }: PackSettingsDialogPro
 
   const allDisabled = licenseGroups.length > 0 && licenseGroups.every((g) => disabledSpdx.has(g.spdx));
 
+  const brandPackCount = useMemo(
+    () => (apiCollections ? Object.entries(apiCollections).filter(([p, i]) => isBrandCollection(p, i)).length : 0),
+    [apiCollections],
+  );
+
   const handleToggle = (spdx: string, value: boolean) => {
     setLicenseEnabled(spdx, value);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Icon Pack Settings</DialogTitle>
           <DialogDescription>
@@ -153,6 +161,29 @@ export function PackSettingsDialog({ open, onOpenChange }: PackSettingsDialogPro
 
         <ScrollArea className="max-h-[60vh]">
           <div className="space-y-3 pr-3">
+            {/* Brand / logo packs are opt-in regardless of license. */}
+            <div className="flex items-start gap-3 rounded-lg border border-border bg-accent/30 p-4">
+              <Switch
+                id="brand-packs"
+                checked={brandPacksVisible}
+                onCheckedChange={(val) => setBrandPacksVisible(val)}
+                className="mt-0.5 shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                <label htmlFor="brand-packs" className="font-medium text-sm text-foreground cursor-pointer">
+                  Show brand &amp; logo packs
+                </label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Simple Icons, Font Awesome Brands, Logos, crypto tokens and similar sets
+                  {brandPackCount > 0 ? ` (${brandPackCount} packs)` : ''}. Company and product logos are
+                  trademarked, so they are hidden by default — turn them on only if you hold the rights to
+                  use a logo as your app icon.
+                </p>
+              </div>
+            </div>
+
+            <p className="pt-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">Licenses</p>
+
             {licenseGroups.map((group) => {
               const isEnabled = !disabledSpdx.has(group.spdx);
               const packsLabel = group.count > group.packs.length

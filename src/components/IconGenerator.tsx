@@ -32,8 +32,9 @@ import {
     getVariantForPrefix,
     STYLE_FAMILIES,
     DEFAULT_PREFIX,
+    isBrandCollection,
 } from '../utils/iconifyCollections';
-import { getDisabledSpdxCodes, getEnabledFamilyIds, subscribeToPackFilter, getFilterVersion } from '../utils/packFilterStore';
+import { getDisabledSpdxCodes, getEnabledFamilyIds, getBrandPacksVisible, subscribeToPackFilter, getFilterVersion } from '../utils/packFilterStore';
 import { Alert, AlertDescription } from './ui/alert';
 import { TriangleAlert } from 'lucide-react';
 import { IconWrapper } from './IconWrapper';
@@ -111,6 +112,23 @@ export function IconGenerator({ onGenerate, generatedIcon, config, onConfigChang
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedQuery, setDebouncedQuery] = useState('');
     const parentRef = useRef<HTMLDivElement>(null);
+    // Width of the icon grid so the column count can follow the viewport
+    // (6 on desktop, 3–4 on phones). A callback ref re-attaches the observer
+    // whenever the grid mounts again (it is unmounted for image/text kinds).
+    const [gridWidth, setGridWidth] = useState(0);
+    const gridResizeObserver = useRef<ResizeObserver | null>(null);
+    const setGridRef = useCallback((el: HTMLDivElement | null) => {
+        gridResizeObserver.current?.disconnect();
+        gridResizeObserver.current = null;
+        parentRef.current = el;
+        if (!el) return;
+        const measure = () => setGridWidth(el.clientWidth);
+        measure();
+        if (typeof ResizeObserver !== 'undefined') {
+            gridResizeObserver.current = new ResizeObserver(measure);
+            gridResizeObserver.current.observe(el);
+        }
+    }, []);
 
     // Iconify-collection catalogue (fetched once per session).
     const [collections, setCollections] = useState<Record<string, CollectionInfo> | null>(null);
@@ -143,22 +161,28 @@ export function IconGenerator({ onGenerate, generatedIcon, config, onConfigChang
     // preference without relying on batched setState callbacks.
     const filterVersion = useSyncExternalStore(subscribeToPackFilter, getFilterVersion);
     const enabledFamilyIds = useMemo(() => getEnabledFamilyIds(), [filterVersion]);
+    // Brand / logo packs are opt-in (trademarks) — see packFilterStore.
+    const brandPacksVisible = useMemo(() => getBrandPacksVisible(), [filterVersion]);
 
     // If the currently active prefix belongs to a disabled family or a
     // collection whose license has been disabled, switch to the first remaining
     // allowed collection — or ALL_COLLECTIONS if none are left.
     useEffect(() => {
-        if (activePrefix === ALL_COLLECTIONS) return;
+        if (activePrefix === ALL_COLLECTIONS || !collections) return;
         const activeFamily = getFamilyForPrefix(activePrefix);
         const disabledSpdxCodes = getDisabledSpdxCodes();
         const activeInfo = collections?.[activePrefix];
         const activeSpdx = activeInfo?.license?.spdx;
         const familyDisabled = !!activeFamily && !enabledFamilyIds.has(activeFamily.id);
         const collectionDisabled = !activeFamily && !!activeSpdx && disabledSpdxCodes.has(activeSpdx);
-        if (!familyDisabled && !collectionDisabled) return;
+        const brandHidden = !brandPacksVisible && isBrandCollection(activePrefix, activeInfo);
+        if (!familyDisabled && !collectionDisabled && !brandHidden) return;
         // collectionItems is recomputed in the same render cycle that bumped
-        // filterVersion, so it already reflects the new filter state.
-        const fallback = collectionItems[0]?.prefix ?? ALL_COLLECTIONS;
+        // filterVersion, so it already reflects the new filter state. Prefer
+        // the stock default library over whatever sorts first alphabetically.
+        const fallback = collectionItems.some((item) => item.prefix === DEFAULT_PREFIX)
+            ? DEFAULT_PREFIX
+            : (collectionItems[0]?.prefix ?? ALL_COLLECTIONS);
         handleLibraryChange(fallback);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filterVersion, collections]);
@@ -271,6 +295,8 @@ export function IconGenerator({ onGenerate, generatedIcon, config, onConfigChang
         const disabledSpdxCodes = getDisabledSpdxCodes();
         return Object.entries(collections)
             .filter(([prefix, info]) => {
+                // Brand / logo packs stay hidden unless the user opted in.
+                if (!brandPacksVisible && isBrandCollection(prefix, info)) return false;
                 const family = getFamilyForPrefix(prefix);
                 // If prefix belongs to a StyleFamily, hide it when that family is disabled.
                 if (family) return enabledFamilyIds.has(family.id);
@@ -288,7 +314,7 @@ export function IconGenerator({ onGenerate, generatedIcon, config, onConfigChang
                 total: info.total ?? 0,
             }))
             .sort((a, b) => a.label.localeCompare(b.label));
-    }, [collections, enabledFamilyIds]);
+    }, [collections, enabledFamilyIds, brandPacksVisible]);
 
     const activeCollectionLabel = useMemo(() => {
         if (activePrefix === ALL_COLLECTIONS) return 'All collections';
@@ -390,6 +416,7 @@ export function IconGenerator({ onGenerate, generatedIcon, config, onConfigChang
             // search-all results respect the user's pack preferences.
             const disabledSpdxCodes = getDisabledSpdxCodes();
             const isPrefixAllowed = (prefix: string) => {
+                if (!brandPacksVisible && isBrandCollection(prefix, collections?.[prefix])) return false;
                 const family = getFamilyForPrefix(prefix);
                 if (family) return enabledFamilyIds.has(family.id);
                 const spdx = collections?.[prefix]?.license?.spdx;
@@ -421,7 +448,7 @@ export function IconGenerator({ onGenerate, generatedIcon, config, onConfigChang
             icon: getIconComponent(`${activePrefix}:${name}`),
             color: generateColor(`${activePrefix}:${name}`),
         }));
-    }, [activePrefix, collectionNames, debouncedQuery, searchResults, enabledFamilyIds, collections, filterVersion]);
+    }, [activePrefix, collectionNames, debouncedQuery, searchResults, enabledFamilyIds, brandPacksVisible, collections, filterVersion]);
 
     const totalCount = activePrefix === ALL_COLLECTIONS
         ? (searchResults?.length ?? 0)
@@ -449,7 +476,8 @@ export function IconGenerator({ onGenerate, generatedIcon, config, onConfigChang
 
     // --- Virtualized grid --------------------------------------------------
 
-    const columnCount = 6;
+    // ~84 px per tile keeps the names legible; the grid div has 8 px padding on each side.
+    const columnCount = gridWidth > 0 ? Math.min(6, Math.max(3, Math.floor((gridWidth - 16) / 84))) : 6;
     const rowVirtualizer = useVirtualizer({
         count: Math.ceil(filteredIcons.length / columnCount),
         getScrollElement: () => parentRef.current,
@@ -486,37 +514,37 @@ export function IconGenerator({ onGenerate, generatedIcon, config, onConfigChang
 
     return (
         <Card className="border border-border shadow-sm bg-card overflow-hidden">
-            <div className="p-6 border-b border-border bg-surface-subtle">
+            <div className="p-4 sm:p-6 border-b border-border bg-surface-subtle">
                 <h3 className="font-semibold text-foreground">Design Your Icon</h3>
                 <p className="text-sm text-muted-foreground mt-1">
                     Pick an icon, upload an image or type text, then customize the appearance
                 </p>
             </div>
             <Tabs defaultValue="icons" className="w-full" onValueChange={(value) => onActiveTabChange?.(value)}>
-                <div className="border-b border-border px-6">
-                    <TabsList className="flex w-full justify-start gap-8 bg-transparent p-0 h-auto rounded-none">
+                <div className="border-b border-border px-4 sm:px-6">
+                    <TabsList className="flex w-full justify-start gap-4 sm:gap-8 bg-transparent p-0 h-auto rounded-none">
                         <TabsTrigger
                             value="icons"
-                            className="flex-none rounded-none border-0 border-b-2 border-transparent px-2 py-4 h-auto font-medium text-muted-foreground hover:text-foreground data-[state=active]:border-b-foreground data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=active]:bg-transparent bg-transparent focus-visible:ring-0 focus-visible:outline-none transition-all"
+                            className="flex-none rounded-none border-0 border-b-2 border-transparent px-1 sm:px-2 py-3 sm:py-4 h-auto whitespace-nowrap font-medium text-muted-foreground hover:text-foreground data-[state=active]:border-b-foreground data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=active]:bg-transparent bg-transparent focus-visible:ring-0 focus-visible:outline-none transition-all"
                         >
                             Foreground
                         </TabsTrigger>
                         <TabsTrigger
                             value="customize"
-                            className="flex-none rounded-none border-0 border-b-2 border-transparent px-2 py-4 h-auto font-medium text-muted-foreground hover:text-foreground data-[state=active]:border-b-foreground data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=active]:bg-transparent bg-transparent focus-visible:ring-0 focus-visible:outline-none transition-all"
+                            className="flex-none rounded-none border-0 border-b-2 border-transparent px-1 sm:px-2 py-3 sm:py-4 h-auto whitespace-nowrap font-medium text-muted-foreground hover:text-foreground data-[state=active]:border-b-foreground data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=active]:bg-transparent bg-transparent focus-visible:ring-0 focus-visible:outline-none transition-all"
                         >
                             Customize
                         </TabsTrigger>
                         <TabsTrigger
                             value="banner"
-                            className="flex-none rounded-none border-0 border-b-2 border-transparent px-2 py-4 h-auto font-medium text-muted-foreground hover:text-foreground data-[state=active]:border-b-foreground data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=active]:bg-transparent bg-transparent focus-visible:ring-0 focus-visible:outline-none transition-all"
+                            className="flex-none rounded-none border-0 border-b-2 border-transparent px-1 sm:px-2 py-3 sm:py-4 h-auto whitespace-nowrap font-medium text-muted-foreground hover:text-foreground data-[state=active]:border-b-foreground data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=active]:bg-transparent bg-transparent focus-visible:ring-0 focus-visible:outline-none transition-all"
                         >
                             Store Banner
                         </TabsTrigger>
                     </TabsList>
                 </div>
 
-                <TabsContent value="icons" forceMount className="p-6 space-y-6 mt-0 data-[state=inactive]:hidden">
+                <TabsContent value="icons" forceMount className="p-4 sm:p-6 space-y-5 sm:space-y-6 mt-0 data-[state=inactive]:hidden">
                         {/* Foreground kind — Iconify icon, uploaded image or text. Switching keeps the
                             other kinds' state (icon pick, image, text) so users can flip back. */}
                         <div className="space-y-2">
@@ -572,7 +600,7 @@ export function IconGenerator({ onGenerate, generatedIcon, config, onConfigChang
                                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                             </Button>
                                         </PopoverTrigger>
-                                        <PopoverContent className="w-[360px] p-0" align="start">
+                                        <PopoverContent className="w-[min(360px,calc(100vw-2rem))] p-0" align="start">
                                             <Command>
                                                 <CommandInput placeholder="Search collections…" />
                                                 <CommandList className="max-h-[320px]">
@@ -654,13 +682,15 @@ export function IconGenerator({ onGenerate, generatedIcon, config, onConfigChang
 
                             {/* Trademark warning for brand-logo packs */}
                             {(() => {
-                                const family = getFamilyForPrefix(activePrefix);
-                                if (!family?.isBrandPack) return null;
+                                if (activePrefix === ALL_COLLECTIONS) return null;
+                                const info = collections?.[activePrefix];
+                                if (!isBrandCollection(activePrefix, info)) return null;
+                                const packLabel = info?.name ?? getFamilyForPrefix(activePrefix)?.label ?? activePrefix;
                                 return (
                                     <Alert className="mt-2">
                                         <TriangleAlert className="h-4 w-4" />
                                         <AlertDescription>
-                                            <strong>{family.label}</strong> contains brand and product logos.
+                                            <strong>{packLabel}</strong> contains brand and product logos.
                                             Logo usage may be restricted by trademark law regardless of the
                                             icon pack license. Verify usage rights with the brand owner before
                                             publishing.
@@ -675,7 +705,7 @@ export function IconGenerator({ onGenerate, generatedIcon, config, onConfigChang
                             const col = collections[activePrefix];
                             return (
                                 <Dialog open={attributionOpen} onOpenChange={setAttributionOpen}>
-                                    <DialogContent className="max-w-md">
+                                    <DialogContent className="sm:max-w-md">
                                         <DialogHeader>
                                             <DialogTitle>Icon Pack Attribution</DialogTitle>
                                         </DialogHeader>
@@ -732,7 +762,7 @@ export function IconGenerator({ onGenerate, generatedIcon, config, onConfigChang
                             </div>
 
                             <div
-                                ref={parentRef}
+                                ref={setGridRef}
                                 className="border border-border rounded-xl bg-surface-subtle overflow-auto h-[450px]"
                             >
                                 {gridStatus ? (
@@ -791,7 +821,7 @@ export function IconGenerator({ onGenerate, generatedIcon, config, onConfigChang
                                                         transform: `translateY(${virtualRow.start}px)`,
                                                     }}
                                                 >
-                                                    <div className="grid grid-cols-6 gap-2 px-1">
+                                                    <div className="grid gap-2 px-1" style={{ gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))` }}>
                                                         {icons.map((iconOption) => {
                                                             const IconComponent = iconOption.icon;
                                                             if (!IconComponent) return null;
@@ -820,7 +850,7 @@ export function IconGenerator({ onGenerate, generatedIcon, config, onConfigChang
                         </>)}
                 </TabsContent>
 
-                <TabsContent value="customize" forceMount className="p-6 pt-4 space-y-4 mt-0 min-h-[550px] data-[state=inactive]:hidden">
+                <TabsContent value="customize" forceMount className="p-4 sm:p-6 sm:pt-4 space-y-4 mt-0 min-h-[550px] data-[state=inactive]:hidden">
                         {/* Style presets — one-click looks rendered live with the current foreground */}
                         <div className="space-y-3">
                             <div className="flex items-center justify-between gap-3">
@@ -1092,7 +1122,7 @@ export function IconGenerator({ onGenerate, generatedIcon, config, onConfigChang
                                     </>
                                 }
                             >
-                                <div className="flex items-start gap-5">
+                                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
                                     <div className="flex-1 min-w-0 space-y-3 pt-1">
                                         <SliderField
                                             label="Scale"
@@ -1122,7 +1152,7 @@ export function IconGenerator({ onGenerate, generatedIcon, config, onConfigChang
                                             resetTo={0}
                                         />
                                     </div>
-                                    <div className="flex shrink-0 flex-col items-center gap-1">
+                                    <div className="flex shrink-0 items-center justify-center gap-3 sm:flex-col sm:gap-1">
                                         <AngleDial
                                             size={76}
                                             value={((config.foregroundRotation % 360) + 360) % 360}
@@ -1196,14 +1226,14 @@ export function IconGenerator({ onGenerate, generatedIcon, config, onConfigChang
                                     ? 'None'
                                     : `${EFFECT_LABELS[config.iconEffect]} · ${config.iconEffectOpacity}%`}
                             >
-                                <div className="flex items-center gap-4">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
                                     <Select
                                         value={config.iconEffect}
                                         onValueChange={(value: string) =>
                                             onConfigChange({ ...config, iconEffect: value as IconConfig['iconEffect'] })
                                         }
                                     >
-                                        <SelectTrigger id="icon-effect" className="w-[150px] shrink-0 bg-card border-border shadow-sm h-9" aria-label="Icon effect">
+                                        <SelectTrigger id="icon-effect" className="w-full sm:w-[150px] shrink-0 bg-card border-border shadow-sm h-9" aria-label="Icon effect">
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -1237,7 +1267,7 @@ export function IconGenerator({ onGenerate, generatedIcon, config, onConfigChang
                         </Accordion>
                 </TabsContent>
 
-                <TabsContent value="banner" forceMount className="p-6 space-y-6 mt-0 min-h-[550px] data-[state=inactive]:hidden">
+                <TabsContent value="banner" forceMount className="p-4 sm:p-6 space-y-6 mt-0 min-h-[550px] data-[state=inactive]:hidden">
                         {/* Use icon background */}
                         <div className="flex items-start justify-between gap-3 p-3 rounded-lg border border-border bg-accent/30">
                             <div className="min-w-0 pr-3">

@@ -185,3 +185,21 @@ export function getStyleOptionsForPrefix(prefix: string): StyleVariant[] {
 
 /** Default prefix to select on first load. */
 export const DEFAULT_PREFIX = 'lucide';
+
+/**
+ * Brand / logo packs: company and product marks (Simple Icons, Font Awesome
+ * Brands, Logos, crypto tokens…). Iconify files most of them under the
+ * "Logos" category; the name/prefix check also catches the archived Font
+ * Awesome brand sets and anything the category misses. Trademark law limits
+ * how these can be used as an app icon regardless of the pack license, so the
+ * picker hides them unless the user opts in (see `packFilterStore`).
+ */
+export function isBrandCollection(
+  prefix: string,
+  info?: { category?: string; name?: string } | null,
+): boolean {
+  if (getFamilyForPrefix(prefix)?.isBrandPack) return true;
+  if (info?.category === 'Logos') return true;
+  const pattern = /brand|logo/i;
+  return pattern.test(prefix) || (!!info?.name && pattern.test(info.name));
+}

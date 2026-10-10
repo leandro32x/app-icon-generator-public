@@ -20,6 +20,8 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    open: true,
+    // `npm run dev:lan` (vite --host) exposes the server to the local network
+    // so it can be opened on a phone; no point popping a desktop browser then.
+    open: !process.argv.includes('--host'),
   },
 });

@@ -551,13 +551,13 @@ export function BannerPreview({ bannerConfig, iconConfig, iconUrl, iconSource, i
 
   return (
     <Card className="border border-border shadow-sm bg-card overflow-hidden">
-      <div className="p-6 border-b border-border bg-surface-subtle">
+      <div className="p-4 sm:p-6 border-b border-border bg-surface-subtle">
         <h3 className="font-semibold text-foreground">Store Banner Preview</h3>
         <p className="text-sm text-muted-foreground mt-1">
           1024 × 500 — Play Store Feature Graphic
         </p>
       </div>
-      <div className="p-6 space-y-4">
+      <div className="p-4 sm:p-6 space-y-4">
         <div className="border border-border rounded-xl overflow-hidden bg-surface-subtle">
           <canvas
             ref={canvasRef}

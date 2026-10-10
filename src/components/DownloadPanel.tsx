@@ -1350,11 +1350,11 @@ Files included
 
   return (
     <Card className="border border-border shadow-sm bg-card overflow-hidden">
-      <div className="p-6 border-b border-border bg-surface-subtle">
+      <div className="p-4 sm:p-6 border-b border-border bg-surface-subtle">
         <h3 className="font-semibold text-foreground">Download Assets</h3>
         <p className="text-sm text-muted-foreground mt-1">Export your icon for all platforms</p>
       </div>
-      <CardContent>
+      <CardContent className="px-4 sm:px-6">
         <div className="space-y-4">
           <Tabs defaultValue="ios" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
@@ -1367,7 +1367,7 @@ Files included
               <Button
                 onClick={downloadAllIOS}
                 disabled={downloading}
-                className="w-full"
+                className="w-full h-auto min-h-10 py-2 whitespace-normal"
                 size="lg"
               >
                 <Package className="mr-2 h-5 w-5" />
@@ -1426,19 +1426,19 @@ Files included
                     key={icon.name}
                     className="flex items-center justify-between p-3 bg-surface-subtle rounded-lg hover:bg-surface-muted transition-colors"
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
                       <div
-                        className="bg-card rounded border border-border flex items-center justify-center"
+                        className="bg-card rounded border border-border flex items-center justify-center shrink-0"
                         style={{ width: 40, height: 40 }}
                       >
                         <span className="text-xs text-muted-foreground">{icon.size}</span>
                       </div>
-                      <div>
-                        <p className="text-sm">{icon.name}</p>
-                        <p className="text-xs text-muted-foreground">{icon.filename}</p>
+                      <div className="min-w-0">
+                        <p className="text-sm truncate">{icon.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{icon.filename}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-2">
                       {icon.required && (
                         <Badge variant="secondary" className="text-xs">Required</Badge>
                       )}
@@ -1460,7 +1460,7 @@ Files included
               <Button
                 onClick={downloadAllAndroid}
                 disabled={downloading}
-                className="w-full"
+                className="w-full h-auto min-h-10 py-2 whitespace-normal"
                 size="lg"
               >
                 <Package className="mr-2 h-5 w-5" />
@@ -1473,19 +1473,19 @@ Files included
                     key={icon.name}
                     className="flex items-center justify-between p-3 bg-surface-subtle rounded-lg hover:bg-surface-muted transition-colors"
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
                       <div
-                        className="bg-card rounded border border-border flex items-center justify-center"
+                        className="bg-card rounded border border-border flex items-center justify-center shrink-0"
                         style={{ width: 40, height: 40 }}
                       >
                         <span className="text-xs text-muted-foreground">{icon.size}</span>
                       </div>
-                      <div>
-                        <p className="text-sm">{icon.name}</p>
-                        <p className="text-xs text-muted-foreground">{icon.filename}</p>
+                      <div className="min-w-0">
+                        <p className="text-sm truncate">{icon.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{icon.filename}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-2">
                       {icon.required && (
                         <Badge variant="secondary" className="text-xs">Required</Badge>
                       )}
@@ -1507,7 +1507,7 @@ Files included
               <Button
                 onClick={downloadFaviconPackage}
                 disabled={downloading}
-                className="w-full"
+                className="w-full h-auto min-h-10 py-2 whitespace-normal"
                 size="lg"
               >
                 <Globe className="mr-2 h-5 w-5" />
@@ -1517,21 +1517,21 @@ Files included
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 {/* favicon.ico (multi-resolution) */}
                 <div className="flex items-center justify-between p-3 bg-surface-subtle rounded-lg hover:bg-surface-muted transition-colors">
-                  <div className="flex items-center gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
                     <div
-                      className="bg-card rounded border border-border flex items-center justify-center"
+                      className="bg-card rounded border border-border flex items-center justify-center shrink-0"
                       style={{ width: 40, height: 40 }}
                     >
                       <span className="text-xs text-muted-foreground">ico</span>
                     </div>
-                    <div>
-                      <p className="text-sm">favicon.ico</p>
+                    <div className="min-w-0">
+                      <p className="text-sm truncate">favicon.ico</p>
                       <p className="text-xs text-muted-foreground">
                         {FAVICON_ICO_SIZES.join(' · ')} px
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-2">
                     <Badge variant="secondary" className="text-xs">Required</Badge>
                     <Button
                       size="sm"
@@ -1553,16 +1553,16 @@ Files included
                     key={filename}
                     className="flex items-center justify-between p-3 bg-surface-subtle rounded-lg hover:bg-surface-muted transition-colors"
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
                       <div
-                        className="bg-card rounded border border-border flex items-center justify-center"
+                        className="bg-card rounded border border-border flex items-center justify-center shrink-0"
                         style={{ width: 40, height: 40 }}
                       >
                         <span className="text-xs text-muted-foreground">svg</span>
                       </div>
-                      <div>
-                        <p className="text-sm">{filename}</p>
-                        <p className="text-xs text-muted-foreground">{description}</p>
+                      <div className="min-w-0">
+                        <p className="text-sm truncate">{filename}</p>
+                        <p className="text-xs text-muted-foreground truncate">{description}</p>
                       </div>
                     </div>
                     <Button
@@ -1581,16 +1581,16 @@ Files included
                     key={asset.filename}
                     className="flex items-center justify-between p-3 bg-surface-subtle rounded-lg hover:bg-surface-muted transition-colors"
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
                       <div
-                        className="bg-card rounded border border-border flex items-center justify-center"
+                        className="bg-card rounded border border-border flex items-center justify-center shrink-0"
                         style={{ width: 40, height: 40 }}
                       >
                         <span className="text-xs text-muted-foreground">{asset.size}</span>
                       </div>
-                      <div>
-                        <p className="text-sm">{asset.name}</p>
-                        <p className="text-xs text-muted-foreground">{asset.filename}</p>
+                      <div className="min-w-0">
+                        <p className="text-sm truncate">{asset.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{asset.filename}</p>
                       </div>
                     </div>
                     <Button
